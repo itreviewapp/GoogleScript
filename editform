@@ -1,0 +1,94 @@
+function sendLineNotify() {
+
+    var form = FormApp.openById('AAAAA'); 
+    var tokens = ['AAAAA','AAAAA'];
+     
+    var form_res = form.getResponses()
+    var formResponse = form_res[form_res.length - 1];
+    var itemResponses = formResponse.getItemResponses();
+
+    var items = form.getItems();
+    var all_message = '\n';
+    var all_message_resend = '';
+    var all_message_send = '';
+    var image_id = [];
+    var IMAGE_URL = [];
+    var imgThumbnail = [];
+    var imgFullsize =  [];
+    var file_upload_num = 0;
+     
+    for (var i = 0; i < itemResponses.length; i++) 
+    {
+      if (items[i].getType() == "GRID") 
+      {
+        var mrow = items[i].asGridItem().getRows();
+        var mcol = items[i].asGridItem().getColumns();
+        var itemResponse_val = itemResponses[i].getResponse().toString().split(",")
+         
+        all_message += (i+1) + ') ' + itemResponses[i].getItem().getTitle() + ' : ' + '\n';
+         
+        for (var j = 0; j < mrow.length; j++)
+        {
+          all_message += '   - ' + mrow[j] + ' : ' + itemResponse_val[j] + '\n';
+        }
+      }
+      else if (items[i].getType() == "FILE_UPLOAD")
+      {
+        image_id[file_upload_num] = itemResponses[i].getResponse()
+        IMAGE_URL[file_upload_num] = 'https://drive.google.com/uc?export=view&id='+ image_id[file_upload_num];
+        imgThumbnail[file_upload_num] = IMAGE_URL[file_upload_num]; // 240×240px JPEG
+        imgFullsize[file_upload_num] = IMAGE_URL[file_upload_num]; //1024×1024px JPEG
+        //all_message += (i+1) + ') ' + itemResponses[i].getItem().getTitle() + ' : ' + 'As below' + '\n';
+        all_message += (i+1) + ') ' + itemResponses[i].getItem().getTitle() + ' : ' + IMAGE_URL[file_upload_num] + '\n';
+        file_upload_num += 1;
+      }
+      else
+      {
+        all_message += (i+1) + ') ' + itemResponses[i].getItem().getTitle() + ' : ' + itemResponses[i].getResponse() + '\n';
+      }
+    }
+     
+    all_message_send = all_message;
+    var message = '';
+    
+    for (var k = 0; k < tokens.length; k++) {
+      if ( file_upload_num > 0 ) 
+      {
+        for (var m = 0; m < file_upload_num; m++ )
+        {
+          if ( m == 0 )
+          {
+            all_message_send = all_message;
+          }
+          else if ( m > 0 ) 
+          {
+            all_message_resend = 'Picture: ' + (m+1);
+            all_message_send = all_message_resend;
+          }
+          var formData = {
+            'message' : all_message_send,
+            'imageThumbnail': imgThumbnail[m],'imageFullsize' : imgFullsize[m],   
+          }
+           
+          var options = {
+            "method" : "post",
+            "payload" : formData,
+            "headers" : {"Authorization" : "Bearer " + tokens[k]}
+          };
+          UrlFetchApp.fetch("https://notify-api.line.me/api/notify", options);
+        }
+      }
+      else {
+        var formData2 = {
+          'message' : all_message_send,  
+        }
+         
+        var options2 = {
+          "method" : "post",
+          "payload" : formData2,
+          "headers" : {"Authorization" : "Bearer " + tokens[k]}
+        };
+        UrlFetchApp.fetch("https://notify-api.line.me/api/notify", options);
+      }
+    }
+  }
